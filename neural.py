@@ -1,36 +1,27 @@
 from random import randint
+import sys
 
 import numpy as np
 from PIL import Image, ImageDraw
 
-# const
-white = 255
-black = 0
-junkcolor = 100
-ConstOutNum = 3
-mode = 'L'
-BaseFile = "GeneratedSet.txt"
-SetSize = 5000
-alpha = 15
-# cfg
-side = 7
-sz = (side, side)
-HarassLevel = 1
-# Each number describes number of neurons in a layer (yes, poor design decision, idc@r3)
-Config = [5, 4, ConstOutNum]
+WHITE_CODE = 255
+BLACK_CODE = 0
+OUT_NEURONS_NUM = 3
+GEN_SET_FILE = "GeneratedSet.txt"
+ALPHA_COEFFICIENT = 15
 
 def get_image():
-    return Image.new(mode, sz, color='white')
+    return Image.new('L', (SIDE_PX, SIDE_PX), color='white')
 
 def Blank():
-    return [[0 for _ in range(side)] for _ in range(side)]
+    return [[0 for _ in range(SIDE_PX)] for _ in range(SIDE_PX)]
 
 
 def Msquare():
     img = get_image()
     pixels = img.load()
     instance = Blank()
-    border = side - 1
+    border = SIDE_PX - 1
     for i in range(1, border):
         instance[1][i] = 1
         instance[border - 1][i] = 1
@@ -39,14 +30,14 @@ def Msquare():
         for i in range(img.size[0]):
             for j in range(img.size[1]):
                 if instance[i][j]:
-                    pixels[i, j] = black
+                    pixels[i, j] = BLACK_CODE
     return img
 
 
 def Mcircle():
     img = get_image()
     draw = ImageDraw.Draw(img)
-    draw.ellipse((1, 1, side - 2, side - 2), fill='white', outline='black')
+    draw.ellipse((1, 1, SIDE_PX - 2, SIDE_PX - 2), fill='white', outline='black')
     return img
 
 
@@ -54,19 +45,19 @@ def Mtriangle():
     img = get_image()
     pixels = img.load()
     instance = Blank()
-    border = side - 1
-    cap = side // 2
+    border = SIDE_PX - 1
+    cap = SIDE_PX // 2
     i = 1
     while i <= cap:
         instance[i][border - i] = 1
-        instance[border - i][side - i - 1] = 1
+        instance[border - i][SIDE_PX - i - 1] = 1
         i = i + 1
     for i in range(1, border):
         instance[i][border - 1] = 1
     for i in range(img.size[0]):
         for j in range(img.size[1]):
             if instance[i][j]:
-                pixels[i, j] = black
+                pixels[i, j] = BLACK_CODE
     return img
 
 
@@ -74,7 +65,7 @@ def Randfigure():
     figure = randint(0, 2)
     if figure == 0:
         img = Msquare()
-    elif (figure == 1):
+    elif figure == 1:
         img = Mcircle()
     else:
         img = Mtriangle()
@@ -101,16 +92,16 @@ def is_white(x):
 def Harass(img, depth):
     while depth:
         pixels = img.load()
-        x = randint(0, side - 1)
-        y = randint(0, side - 1)
+        x = randint(0, SIDE_PX - 1)
+        y = randint(0, SIDE_PX - 1)
         if not is_white(pixels[x, y]):
-            pixels[x, y] = white
+            pixels[x, y] = WHITE_CODE
             not_added = 1
             while not_added:
-                i = randint(0, side - 1)
-                j = randint(0, side - 1)
+                i = randint(0, SIDE_PX - 1)
+                j = randint(0, SIDE_PX - 1)
                 if is_white(pixels[i, j]):
-                    pixels[i, j] = black
+                    pixels[i, j] = BLACK_CODE
                     not_added = 0
                     depth -= 1
     return img
@@ -127,11 +118,11 @@ def GetVec(img):
 
 
 def ToImg(Vector):
-    img = Image.new(mode, sz, color='white')
+    img = get_image()
     pixels = img.load()
-    for i in range(side * side):
-        if (Vector[i] == '1'):
-            pixels[(i % side), (i // side)] = 1
+    for i in range(SIDE_PX * SIDE_PX):
+        if Vector[i] == '1':
+            pixels[(i % SIDE_PX), (i // SIDE_PX)] = 1
     return img
 
 
@@ -151,22 +142,22 @@ def ReadLn(fname, delete=1):
 def ToVector(string):
     Vector = [0 for _ in range(len(string) - 1)]
     for i in range(len(string)):
-        if (string[i] == '1'):
+        if string[i] == '1':
             Vector[i] = 1
     return Vector
 
 
 def ReadFromBase():
-    Vector = ToVector(ReadLn(BaseFile))
-    Figure = ToVector(ReadLn(BaseFile))
+    Vector = ToVector(ReadLn(GEN_SET_FILE))
+    Figure = ToVector(ReadLn(GEN_SET_FILE))
     return (Vector, Figure)
 
 
 def GenerateSet(harass, size=100):
-    f = open(BaseFile, "w")
+    f = open(GEN_SET_FILE, "w")
     for i in range(size):
         figure = randint(0, 2)
-        Res = [0 for _ in range(ConstOutNum)]
+        Res = [0 for _ in range(OUT_NEURONS_NUM)]
         if figure == 0:
             img = Msquare()
             Res[0] = 1
@@ -188,12 +179,12 @@ def CalculateErr(need, got):
     TotalErr = 0
     for i in range(len(need)):
         TotalErr += need[i] - got[i]
-    return (TotalErr * 0.5)
+    return TotalErr * 0.5
 
 
 def RunSet(net):
     net.ShowWeights()
-    for i in range(SetSize):
+    for i in range(SET_SIZE):
         couple = ReadFromBase()
         net.Eat(couple[0])
         result = net.Run()
@@ -208,19 +199,10 @@ def RunSet(net):
             if result[i] == max_val:
                 got = i
         if waited == got:
-            # print("Recognized")
             net.recognized += 1
         else:
-            # print("Not Good: need %s, got %s" %(couple[1], result))
             net.not_recognized += 1
             MutateWeights(net, couple[1])
-        # TotalErr = CalculateErr(couple[1], result)
-        # if (abs(TotalErr) > 0.1):
-        #     net.recognized +=1
-        #     print("Total Error abs is eq %s" %abs(TotalErr))
-        # else:
-        #     net.not_recognized +=1
-        #     MutateWeights(net, couple[0])
     net.ShowWeights()
     net.ShowdWeights()
 
@@ -231,36 +213,29 @@ def MutateWeights(net, need):
             i = 0
             for neuron in net.Layers[layer_num].Neurons:
                 _out = net.Vectors[layer_num + 1][i]
-                # print("out %s" % _out)
                 t = need[i]
                 neuron.Delta = (t - _out) * (1 - _out) * _out
                 _in = net.Vectors[layer_num]
-                # print("in %s" % _in)
                 for pr_nrn in range(len(net.Layers[layer_num - 1].Neurons)):
-                    neuron.dWeights[pr_nrn] = alpha * neuron.Delta * _in[pr_nrn]
+                    neuron.dWeights[pr_nrn] = ALPHA_COEFFICIENT * neuron.Delta * _in[pr_nrn]
                 i += 1
         else:
             i = 0
             for neuron in net.Layers[layer_num].Neurons:
                 delta_sum = 0
                 _out = net.Vectors[layer_num + 1][i]
-                # print("out %s" % _out)
                 for nxt_nrn in net.Layers[layer_num + 1].Neurons:
                     delta_sum += nxt_nrn.Delta * nxt_nrn.Weights[i]
                 neuron.Delta = delta_sum * (1 - _out) * _out
                 _in = net.Vectors[layer_num]
-                # print("in %s" % _in)
                 if layer_num == 0:
                     _range = len(net.Vectors[0])
                 else:
                     _range = len(net.Layers[layer_num - 1].Neurons)
                 for pr_nrn in range(_range):
-                    neuron.dWeights[pr_nrn] = alpha * neuron.Delta * _in[pr_nrn]
+                    neuron.dWeights[pr_nrn] = ALPHA_COEFFICIENT * neuron.Delta * _in[pr_nrn]
                 i += 1
     net.Update()
-    # net.ShowVectors()
-    # net.ShowWeights()
-    # net.ShowdWeights()
 
 
 class Network:
@@ -376,30 +351,35 @@ class Neuron(Layer):
 
     def Update(self):
         for i in range(len(self.dWeights)):
-            # print(">>weight %d update" %i)
             self.Weights[i] += self.dWeights[i]
 
 
 def main():
-    if not (side % 2):
+    if not (SIDE_PX % 2):
         print("bad side")
-        exit()
+    else:
+        img = Randfigure()
+        Vector = MutateVector(GetVec(img))
+        img = Harass(img, HARASS_LEVEL)
+        img.save('img.png')
 
-    img = Randfigure()
-    Vector = MutateVector(GetVec(img))
-    img = Harass(img, HarassLevel)
-    img.save('img.png')
-
-    Vector = GetVec(img)
-    GenerateSet(HarassLevel, SetSize)
-    Net = Network(Config, Vector)
-    RunSet(Net)
-    # Net.ShowVectors()
-    # Net.ShowWeights()
-    # Net.ShowdWeights()
-    print("recognized = ", Net.recognized)
-    print("not_recognized = ", Net.not_recognized)
+        Vector = GetVec(img)
+        GenerateSet(HARASS_LEVEL, SET_SIZE)
+        Net = Network(LAYERS_NUM_MAP, Vector)
+        RunSet(Net)
+        print("recognized = ", Net.recognized)
+        print("not_recognized = ", Net.not_recognized)
 
 
 if __name__ == '__main__':
-    main()
+    if not len(sys.argv) == 4:
+        print("ARGS:\n"
+              "1: generated set size\n"
+              "2: img side size in px\n"
+              "3: how hard img passed to trained net should be harassed (number of swapped px)")
+    else:
+        SET_SIZE = int(sys.argv[1])
+        SIDE_PX = int(sys.argv[2])
+        HARASS_LEVEL = int(sys.argv[3])
+        LAYERS_NUM_MAP = [5, 4, OUT_NEURONS_NUM]
+        main()
