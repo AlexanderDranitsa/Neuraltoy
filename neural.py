@@ -19,16 +19,15 @@ HarassLevel = 1
 # Each number describes number of neurons in a layer (yes, poor design decision, idc@r3)
 Config = [5, 4, ConstOutNum]
 
-
-#
+def get_image():
+    return Image.new(mode, sz, color='white')
 
 def Blank():
-    empty = [[0 for _ in range(side)] for _ in range(side)]
-    return empty
+    return [[0 for _ in range(side)] for _ in range(side)]
 
 
 def Msquare():
-    img = Image.new(mode, sz, color='white')
+    img = get_image()
     pixels = img.load()
     instance = Blank()
     border = side - 1
@@ -45,14 +44,14 @@ def Msquare():
 
 
 def Mcircle():
-    img = Image.new(mode, sz, color='white')
+    img = get_image()
     draw = ImageDraw.Draw(img)
     draw.ellipse((1, 1, side - 2, side - 2), fill='white', outline='black')
     return img
 
 
 def Mtriangle():
-    img = Image.new(mode, sz, color='white')
+    img = get_image()
     pixels = img.load()
     instance = Blank()
     border = side - 1
@@ -73,7 +72,7 @@ def Mtriangle():
 
 def Randfigure():
     figure = randint(0, 2)
-    if (figure == 0):
+    if figure == 0:
         img = Msquare()
     elif (figure == 1):
         img = Mcircle()
@@ -96,17 +95,7 @@ def Sygm(x):
 
 
 def is_white(x):
-    if (x > 100):
-        return 1
-    else:
-        return 0
-
-
-def is_black(x):
-    if (x < 100):
-        return 1
-    else:
-        return 0
+    return 1 if x > 100 else 0
 
 
 def Harass(img, depth):
@@ -114,7 +103,7 @@ def Harass(img, depth):
         pixels = img.load()
         x = randint(0, side - 1)
         y = randint(0, side - 1)
-        if is_black(pixels[x, y]):
+        if not is_white(pixels[x, y]):
             pixels[x, y] = white
             not_added = 1
             while not_added:
@@ -132,7 +121,7 @@ def GetVec(img):
     Vector = Blank()
     for i in range(img.size[0]):
         for j in range(img.size[1]):
-            if is_black(bitmask[i, j]):
+            if not is_white(bitmask[i, j]):
                 Vector[j][i] = 1
     return sum(Vector, [])
 
@@ -170,8 +159,7 @@ def ToVector(string):
 def ReadFromBase():
     Vector = ToVector(ReadLn(BaseFile))
     Figure = ToVector(ReadLn(BaseFile))
-    test_couple = (Vector, Figure)
-    return test_couple
+    return (Vector, Figure)
 
 
 def GenerateSet(harass, size=100):
@@ -179,10 +167,10 @@ def GenerateSet(harass, size=100):
     for i in range(size):
         figure = randint(0, 2)
         Res = [0 for _ in range(ConstOutNum)]
-        if (figure == 0):
+        if figure == 0:
             img = Msquare()
             Res[0] = 1
-        elif (figure == 1):
+        elif figure == 1:
             img = Mcircle()
             Res[1] = 1
         else:
@@ -212,14 +200,14 @@ def RunSet(net):
         max_val = max(couple[1])
         waited = 0
         for i in range(len(couple[1])):
-            if (couple[1][i] == max_val):
+            if couple[1][i] == max_val:
                 waited = i
         got = 0
         max_val = max(result)
         for i in range(len(result)):
-            if (result[i] == max_val):
+            if result[i] == max_val:
                 got = i
-        if (waited == got):
+        if waited == got:
             # print("Recognized")
             net.recognized += 1
         else:
@@ -239,7 +227,7 @@ def RunSet(net):
 
 def MutateWeights(net, need):
     for layer_num in range(len(net.Layers) - 1, -1, -1):
-        if (layer_num == len(net.Layers) - 1):
+        if layer_num == len(net.Layers) - 1:
             i = 0
             for neuron in net.Layers[layer_num].Neurons:
                 _out = net.Vectors[layer_num + 1][i]
@@ -262,7 +250,7 @@ def MutateWeights(net, need):
                 neuron.Delta = delta_sum * (1 - _out) * _out
                 _in = net.Vectors[layer_num]
                 # print("in %s" % _in)
-                if (layer_num == 0):
+                if layer_num == 0:
                     _range = len(net.Vectors[0])
                 else:
                     _range = len(net.Layers[layer_num - 1].Neurons)
@@ -283,13 +271,13 @@ class Network:
         self.Config = config
         self.Layers = [0 for _ in range(len(self.Config))]
         for i in range(0, len(self.Layers)):
-            if (i == 0):
+            if not i:
                 self.Layers[i] = Layer(self.Config[i], len(self.InputVector))
             else:
                 self.Layers[i] = Layer(self.Config[i], self.Config[i - 1])
         self.Vectors = [0 for _ in range(len(self.Config) + 1)]
         for i in range(0, len(self.Vectors)):
-            if (i == 0):
+            if not i:
                 self.Vectors[i] = self.InputVector
             else:
                 self.Vectors[i] = [0 for _ in range(self.Config[i - 1])]
@@ -300,7 +288,7 @@ class Network:
         return self.Vectors[i + 1]
 
     def ShowVectors(self, num='EMPTY'):
-        if (num == 'EMPTY'):
+        if num == 'EMPTY':
             for i in range(len(self.Vectors)):
                 print(self.Vectors[i])
         else:
@@ -308,21 +296,21 @@ class Network:
         return self.Vectors
 
     def ShowWeights(self, layer=0):
-        if (layer == 0):
+        if not layer:
             for i in range(len(self.Layers)):
                 self.Layers[i].ShowWeights()
         else:
             self.Layers[layer].ShowWeights()
 
     def ShowdWeights(self, layer=0):
-        if (layer == 0):
+        if not layer:
             for i in range(len(self.Layers)):
                 self.Layers[i].ShowdWeights()
         else:
             self.Layers[layer].ShowdWeights()
 
     def ShowDelta(self, layer=0):
-        if (layer == 0):
+        if not layer:
             for i in range(len(self.Layers)):
                 self.Layers[i].ShowDelta()
         else:
@@ -393,7 +381,7 @@ class Neuron(Layer):
 
 
 def main():
-    if (side % 2 == 0):
+    if not (side % 2):
         print("bad side")
         exit()
 
