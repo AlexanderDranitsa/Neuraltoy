@@ -13,19 +13,19 @@ GEN_SET_FILE = "GeneratedSet.txt"
 ALPHA_COEFFICIENT = 15
 
 
-def get_image():
-    return Image.new('L', (SIDE_PX, SIDE_PX), color='white')
+def get_image(side_px):
+    return Image.new('L', (side_px, side_px), color='white')
 
 
-def get_blank_matrix():
-    return [[0 for _ in range(SIDE_PX)] for _ in range(SIDE_PX)]
+def get_blank_matrix(side_px):
+    return [[0 for _ in range(side_px)] for _ in range(side_px)]
 
 
-def get_square_img():
-    img = get_image()
+def get_square_img(side_px):
+    img = get_image(side_px)
     pixels = img.load()
-    instance = get_blank_matrix()
-    border = SIDE_PX - 1
+    instance = get_blank_matrix(side_px)
+    border = side_px - 1
     for i in range(1, border):
         instance[1][i] = 1
         instance[border - 1][i] = 1
@@ -38,23 +38,23 @@ def get_square_img():
     return img
 
 
-def get_circle_img():
-    img = get_image()
+def get_circle_img(side_px):
+    img = get_image(side_px)
     draw = ImageDraw.Draw(img)
-    draw.ellipse((1, 1, SIDE_PX - 2, SIDE_PX - 2), fill='white', outline='black')
+    draw.ellipse((1, 1, side_px - 2, side_px - 2), fill='white', outline='black')
     return img
 
 
-def get_triangle_img():
-    img = get_image()
+def get_triangle_img(side_px):
+    img = get_image(side_px)
     pixels = img.load()
-    instance = get_blank_matrix()
-    border = SIDE_PX - 1
-    cap = SIDE_PX // 2
+    instance = get_blank_matrix(side_px)
+    border = side_px - 1
+    cap = side_px // 2
     i = 1
     while i <= cap:
         instance[i][border - i] = 1
-        instance[border - i][SIDE_PX - i - 1] = 1
+        instance[border - i][side_px - i - 1] = 1
         i = i + 1
     for i in range(1, border):
         instance[i][border - 1] = 1
@@ -65,14 +65,14 @@ def get_triangle_img():
     return img
 
 
-def get_random_figure():
+def get_random_figure(side_px):
     figure = randint(0, 2)
     if figure == 0:
-        img = get_square_img()
+        img = get_square_img(side_px)
     elif figure == 1:
-        img = get_circle_img()
+        img = get_circle_img(side_px)
     else:
-        img = get_triangle_img()
+        img = get_triangle_img(side_px)
     return img
 
 
@@ -93,17 +93,17 @@ def is_white(x):
     return 1 if x > 100 else 0
 
 
-def harass_img(img, depth):
+def harass_img(img, depth, side_px):
     while depth:
         pixels = img.load()
-        x = randint(0, SIDE_PX - 1)
-        y = randint(0, SIDE_PX - 1)
+        x = randint(0, side_px - 1)
+        y = randint(0, side_px - 1)
         if not is_white(pixels[x, y]):
             pixels[x, y] = WHITE_CODE
             not_added = 1
             while not_added:
-                i = randint(0, SIDE_PX - 1)
-                j = randint(0, SIDE_PX - 1)
+                i = randint(0, side_px - 1)
+                j = randint(0, side_px - 1)
                 if is_white(pixels[i, j]):
                     pixels[i, j] = BLACK_CODE
                     not_added = 0
@@ -111,9 +111,9 @@ def harass_img(img, depth):
     return img
 
 
-def get_vector(img):
+def get_vector(img, side_px):
     bit_mask = img.load()
-    vec = get_blank_matrix()
+    vec = get_blank_matrix(side_px)
     for i in range(img.size[0]):
         for j in range(img.size[1]):
             if not is_white(bit_mask[i, j]):
@@ -142,28 +142,28 @@ def str_to_vector(string):
     return vec
 
 
-def generate_set(harass, size=100):
+def generate_set(harass, size=100, side_px=7):
     f = open(GEN_SET_FILE, "w")
     for i in range(size):
         figure = randint(0, 2)
         figure_description = [0 for _ in range(OUT_NEURONS_NUM)]
         if figure == 0:
-            img = get_square_img()
+            img = get_square_img(side_px)
             figure_description[0] = 1
         elif figure == 1:
-            img = get_circle_img()
+            img = get_circle_img(side_px)
             figure_description[1] = 1
         else:
-            img = get_triangle_img()
+            img = get_triangle_img(side_px)
             figure_description[2] = 1
-        print(''.join(str(e) for e in get_vector(harass_img(img, harass))), file=f)
+        print(''.join(str(e) for e in get_vector(harass_img(img, harass, side_px), side_px)), file=f)
         print(''.join(str(e) for e in figure_description), file=f)
     f.close()
 
 
-def run_set(net):
+def run_set(net, set_size):
     net.show_weights()
-    for i in range(SET_SIZE):
+    for i in range(set_size):
         pair_from_base_file = str_to_vector(read_line(GEN_SET_FILE)), str_to_vector(read_line(GEN_SET_FILE))
         net.eat(pair_from_base_file[0])
         result = net.run()
@@ -323,14 +323,14 @@ class Neuron(Layer):
             self.weights[i] += self.delta_weights[i]
 
 
-def main():
-    if not (SIDE_PX % 2):
+def main(set_size, side_px, harass_lvl, layers_num_map):
+    if not (side_px % 2):
         print("bad side")
     else:
-        harass_img(get_random_figure(), HARASS_LEVEL).save('img.png')
-        generate_set(HARASS_LEVEL, SET_SIZE)
-        net = Network(LAYERS_NUM_MAP, get_vector(get_random_figure()))
-        run_set(net)
+        harass_img(get_random_figure(side_px), harass_lvl, side_px).save('img.png')
+        generate_set(harass_lvl, set_size, side_px)
+        net = Network(layers_num_map, get_vector(get_random_figure(side_px), side_px))
+        run_set(net, set_size)
         print("recognized = ", net.recognized)
         print("not_recognized = ", net.not_recognized)
 
@@ -342,8 +342,8 @@ if __name__ == '__main__':
               "2: img side size in px\n"
               "3: how hard img passed to trained net should be harassed (number of swapped px)")
     else:
-        SET_SIZE = int(sys.argv[1])
-        SIDE_PX = int(sys.argv[2])
-        HARASS_LEVEL = int(sys.argv[3])
-        LAYERS_NUM_MAP = [5, 4, OUT_NEURONS_NUM]
-        main()
+        setsize = int(sys.argv[1])
+        sidepx = int(sys.argv[2])
+        harasslvl = int(sys.argv[3])
+        layersnum_map = [5, 4, OUT_NEURONS_NUM]
+        main(setsize, sidepx, harasslvl, layersnum_map)
